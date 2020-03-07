@@ -129,4 +129,30 @@ defmodule InkTest do
              "msg" => "the credentials from your URI are guest and [FILTERED]"
            } = Jason.decode!(msg)
   end
+
+  test "it logs default log level without config" do
+    Logger.info("test")
+
+    assert_receive {:io_request, _, _, {:put_chars, :unicode, msg}}
+
+    assert %{"level" => 30} = Jason.decode!(msg)
+  end
+
+  test "it logs default log level with wrong config" do
+    Logger.configure_backend(Ink, level_type: :wrong)
+    Logger.info("test")
+
+    assert_receive {:io_request, _, _, {:put_chars, :unicode, msg}}
+
+    assert %{"level" => 30} = Jason.decode!(msg)
+  end
+
+  test "it logs as_is log level" do
+    Logger.configure_backend(Ink, level_type: :as_is)
+    Logger.info("test")
+
+    assert_receive {:io_request, _, _, {:put_chars, :unicode, msg}}
+
+    assert %{"level" => "info"} = Jason.decode!(msg)
+  end
 end

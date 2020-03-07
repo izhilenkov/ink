@@ -117,7 +117,7 @@ defmodule Ink do
   defp log_message(message, level, timestamp, metadata, config) do
     if Logger.compare_levels(level, config.level) != :lt do
       message
-      |> base_map(timestamp, level)
+      |> base_map(timestamp, level, config)
       |> Map.merge(process_metadata(metadata, config))
       |> Ink.Encoder.encode()
       |> log_json(config)
@@ -158,20 +158,20 @@ defmodule Ink do
 
   defp log_to_device(msg, io_device), do: IO.puts(io_device, msg)
 
-  defp base_map(message, timestamp, level) when is_binary(message) do
+  defp base_map(message, timestamp, level, config) when is_binary(message) do
     %{
       name: name(),
       pid: System.get_pid() |> String.to_integer(),
       hostname: hostname(),
       msg: message,
       time: formatted_timestamp(timestamp),
-      level: level(level),
+      level: level(level, config.level_type),
       v: 0
     }
   end
 
-  defp base_map(message, timestamp, level) when is_list(message) do
-    base_map(IO.iodata_to_binary(message), timestamp, level)
+  defp base_map(message, timestamp, level, config) when is_list(message) do
+    base_map(IO.iodata_to_binary(message), timestamp, level, config)
   end
 
   defp formatted_timestamp({date, {hours, minutes, seconds, milliseconds}}) do
@@ -211,11 +211,14 @@ defmodule Ink do
       filtered_uri_credentials: [],
       secret_strings: [],
       io_device: :stdio,
-      metadata: nil
+      metadata: nil,
+      level_type: nil
     }
   end
 
-  defp level(level) do
+  defp level(level, lt) when lt == :as_is, do: level
+
+  defp level(level, _lt) do
     case level do
       :debug -> 20
       :info -> 30
